@@ -1,0 +1,21 @@
+{
+  "name": "lightweave",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI-powered theme creator, editor, and switcher",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-colorful": "^5.6.1",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
+    "vite": "^8.0.0"
+  }
+}
