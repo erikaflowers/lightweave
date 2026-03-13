@@ -1,9 +1,22 @@
 {
   "name": "lightweave",
-  "version": "1.0.0",
-  "private": true,
+  "version": "2.0.0",
   "type": "module",
-  "description": "AI-powered theme creator, editor, and switcher",
+  "description": "AI-powered theme creator, editor, and switcher — schema-driven and embeddable",
+  "bin": {
+    "lightweave": "./bin/lightweave.js"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./presets": "./src/presets/index.js",
+    "./schema": "./src/lib/schema.js",
+    "./store": "./src/lib/store.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "lightweave.config.js"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -17,5 +30,22 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.1",
     "vite": "^8.0.0"
-  }
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "react-dom": { "optional": true }
+  },
+  "keywords": [
+    "theme",
+    "color",
+    "css",
+    "design-system",
+    "ai",
+    "lightweave"
+  ],
+  "license": "MIT"
 }

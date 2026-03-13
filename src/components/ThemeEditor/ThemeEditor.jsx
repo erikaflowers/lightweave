@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { applyTheme } from '../../lib/store.js';
+import { applyTheme, schema } from '../../lib/store.js';
 import ColorPickerPopover from './ColorPickerPopover.jsx';
 import ColorRow from './ColorRow.jsx';
-import { COLOR_GROUPS } from './colorGroups.js';
+
+// Use schema.groups instead of hardcoded COLOR_GROUPS
+const colorGroups = schema.groups;
 
 export default function ThemeEditor({ theme, onSave, onCancel }) {
   const [draftTheme, setDraftTheme] = useState(() => ({
@@ -13,7 +15,7 @@ export default function ThemeEditor({ theme, onSave, onCancel }) {
 
   const originalThemeRef = useRef(theme);
   const [activeColor, setActiveColor] = useState(null);
-  const [expandedGroups, setExpandedGroups] = useState(['backgrounds']);
+  const [expandedGroups, setExpandedGroups] = useState([colorGroups[0]?.id]);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(draftTheme.name);
 
@@ -110,7 +112,7 @@ export default function ThemeEditor({ theme, onSave, onCancel }) {
       </div>
 
       <div style={styles.colorGroups}>
-        {COLOR_GROUPS.map((group) => (
+        {colorGroups.map((group) => (
           <div key={group.id} style={styles.accordion}>
             <button style={styles.accordionHeader} onClick={() => toggleGroup(group.id)}>
               <div style={styles.accordionHeaderContent}>

@@ -1,12 +1,55 @@
 // Lightweave AI Theme Generator — Netlify Function
-// POST /api/generate-theme { keywords: "ocean sunset" }
+// POST /api/generate-theme { keywords: "ocean sunset", schema?: { groups: [...] } }
 // Returns { theme: { id, name, description, colors, typography, isCustom, keywords } }
+//
+// If a schema is provided in the request body, the prompt is built dynamically
+// from its color definitions. Otherwise uses the default 28-key Lightweave schema.
+
+// ── Default schema (inlined to avoid import issues in Netlify Functions) ──
+
+const DEFAULT_COLORS = [
+  { key: 'backgroundPrimary', description: 'main app background' },
+  { key: 'backgroundSecondary', description: 'secondary/sidebar backgrounds' },
+  { key: 'backgroundTertiary', description: 'tertiary/deeper backgrounds' },
+  { key: 'backgroundCard', description: 'card/elevated surfaces' },
+  { key: 'textPrimary', description: 'main text color' },
+  { key: 'textSecondary', description: 'secondary text' },
+  { key: 'textMuted', description: 'muted/placeholder text' },
+  { key: 'borderDefault', description: 'default borders' },
+  { key: 'borderLight', description: 'subtle borders' },
+  { key: 'accentPrimary', description: 'primary accent/buttons' },
+  { key: 'accentPrimaryHover', description: 'accent hover state' },
+  { key: 'accentSecondary', description: 'secondary accent' },
+  { key: 'accentBackground', description: 'accent tinted background' },
+  { key: 'accentBorder', description: 'accent colored border' },
+  { key: 'buttonText', description: 'text on accent buttons' },
+  { key: 'sidebarBackground', description: 'sidebar background' },
+  { key: 'sidebarText', description: 'sidebar text' },
+  { key: 'sidebarTextMuted', description: 'sidebar muted text' },
+  { key: 'sidebarAccent', description: 'sidebar accent color' },
+  { key: 'sidebarAccentText', description: 'text on sidebar accent' },
+  { key: 'sidebarBorder', description: 'sidebar borders' },
+  { key: 'success', description: 'success state' },
+  { key: 'successBackground', description: 'success background tint' },
+  { key: 'error', description: 'error state' },
+  { key: 'errorBackground', description: 'error background tint' },
+  { key: 'warning', description: 'warning state' },
+  { key: 'warningBackground', description: 'warning background tint' },
+  { key: 'overlayBackdrop', description: 'modal backdrop (use rgba)' },
+];
+
+// ── Dynamic Prompt Builder ───────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `You are an expert UI/UX designer specializing in color theory and accessibility. You create beautiful, cohesive color palettes for software applications. You understand contrast ratios, color harmony, and how to evoke specific moods through color.
 
 IMPORTANT: You MUST respond with valid JSON only. No markdown code fences, no explanation, just the raw JSON object.`;
 
-const THEME_PROMPT = `Generate a complete color theme for an AI chat application based on these keywords: "{keywords}"
+function buildThemePrompt(keywords, colorDefs) {
+  const colorList = colorDefs
+    .map(c => `    "${c.key}": "#hex - ${c.description}"`)
+    .join(',\n');
+
+  return `Generate a complete color theme for an application based on these keywords: "${keywords}"
 
 The theme should evoke the mood, feeling, or aesthetic suggested by those keywords while remaining functional and readable for a productivity app.
 
@@ -16,34 +59,7 @@ Return a JSON object with this exact structure:
   "name": "Theme Name (2-4 words, creative and evocative)",
   "description": "Brief description (under 60 chars)",
   "colors": {
-    "backgroundPrimary": "#hex - main app background",
-    "backgroundSecondary": "#hex - secondary/sidebar backgrounds",
-    "backgroundTertiary": "#hex - tertiary/deeper backgrounds",
-    "backgroundCard": "#hex - card/elevated surfaces",
-    "textPrimary": "#hex - main text color",
-    "textSecondary": "#hex - secondary text",
-    "textMuted": "#hex - muted/placeholder text",
-    "borderDefault": "#hex - default borders",
-    "borderLight": "#hex - subtle borders",
-    "accentPrimary": "#hex - primary accent/buttons",
-    "accentPrimaryHover": "#hex - accent hover state",
-    "accentSecondary": "#hex - secondary accent",
-    "accentBackground": "#hex - accent tinted background",
-    "accentBorder": "#hex - accent colored border",
-    "buttonText": "#hex - text on accent buttons",
-    "sidebarBackground": "#hex - sidebar background",
-    "sidebarText": "#hex - sidebar text",
-    "sidebarTextMuted": "#hex - sidebar muted text",
-    "sidebarAccent": "#hex - sidebar accent color",
-    "sidebarAccentText": "#hex - text on sidebar accent",
-    "sidebarBorder": "#hex - sidebar borders",
-    "success": "#hex - success state",
-    "successBackground": "#hex - success background tint",
-    "error": "#hex - error state",
-    "errorBackground": "#hex - error background tint",
-    "warning": "#hex - warning state",
-    "warningBackground": "#hex - warning background tint",
-    "overlayBackdrop": "rgba(r,g,b,a) - modal backdrop"
+${colorList}
   },
   "typography": {
     "fontFamilyHeading": "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -58,13 +74,33 @@ Return a JSON object with this exact structure:
 
 CRITICAL REQUIREMENTS:
 1. Ensure sufficient contrast between text and backgrounds (WCAG AA minimum)
-2. The sidebar should feel cohesive but distinct from the main content area
-3. Accent colors should pop but not overwhelm
-4. Success/error/warning colors should be recognizable but fit the theme
-5. All hex values must be valid 6-character hex codes (e.g., #FF5500)
-6. The theme should be FUNCTIONAL - users need to read and write in this app for hours
+2. Accent colors should pop but not overwhelm
+3. Success/error/warning colors should be recognizable but fit the theme
+4. All hex values must be valid 6-character hex codes (e.g., #FF5500)
+5. The theme should be FUNCTIONAL - users need to read and write in this app for hours
 
 Respond with ONLY the JSON object, no other text.`;
+}
+
+/**
+ * Extract flat color definitions from a schema object.
+ * Schema shape: { groups: [{ colors: [{ key, description }] }] }
+ */
+function extractColorDefs(schema) {
+  if (!schema?.groups) return DEFAULT_COLORS;
+  const defs = [];
+  for (const group of schema.groups) {
+    if (!Array.isArray(group.colors)) continue;
+    for (const color of group.colors) {
+      if (color.key) {
+        defs.push({ key: color.key, description: color.description || color.label || color.key });
+      }
+    }
+  }
+  return defs.length > 0 ? defs : DEFAULT_COLORS;
+}
+
+// ── Handler ──────────────────────────────────────────────────────────────
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -90,6 +126,10 @@ export default async (req) => {
     return jsonResponse({ error: 'ANTHROPIC_API_KEY not configured' }, 500);
   }
 
+  // Use schema from request body if provided, otherwise default
+  const colorDefs = body.schema ? extractColorDefs(body.schema) : DEFAULT_COLORS;
+  const themePrompt = buildThemePrompt(keywords, colorDefs);
+
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -103,7 +143,7 @@ export default async (req) => {
         max_tokens: 2048,
         system: SYSTEM_PROMPT,
         messages: [
-          { role: 'user', content: THEME_PROMPT.replace('{keywords}', keywords) }
+          { role: 'user', content: themePrompt }
         ],
       }),
     });
